@@ -18,10 +18,10 @@ const PLATFORM_SPRITE_WIDTH := 128.0
 const PLATFORM_SPRITE_HEIGHT := 40.0
 const PLAYER_BASE_SCALE := Vector2(0.92, 0.92)
 const SPRING_BASE_SCALE := Vector2(0.58, 0.58)
-const SPRING_VISUAL_HEIGHT := 37.12
-const SPRING_SEAT_Y := 9.0
-const SPRING_BASE_Y := -9.56
-const SPRING_TOP_OFFSET := -28.12
+const SPRING_VISUAL_HEIGHT := 31.9
+const SPRING_SEAT_Y := 7.0
+const SPRING_BASE_Y := -8.95
+const SPRING_TOP_OFFSET := -25.0
 const HUD_HEIGHT := 58.0
 
 const PLAYER_TEXTURE := preload("res://assets/generated/sprites/player.png")
