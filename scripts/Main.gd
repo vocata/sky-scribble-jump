@@ -30,6 +30,9 @@ const PLATFORM_MOVING_TEXTURE := preload("res://assets/generated/sprites/platfor
 const PLATFORM_FRAGILE_TEXTURE := preload("res://assets/generated/sprites/platform_fragile.png")
 const SPRING_TEXTURE := preload("res://assets/generated/sprites/spring.png")
 const SPARKLE_TEXTURE := preload("res://assets/generated/sprites/sparkle.png")
+const GAME_OVER_TEXTURE := preload("res://assets/generated/sprites/game_over.png")
+const GAME_OVER_PANEL_TEXTURE := preload("res://assets/generated/sprites/game_over_panel.png")
+const RETRY_BUTTON_TEXTURE := preload("res://assets/generated/sprites/retry_button.png")
 
 var rng := RandomNumberGenerator.new()
 var world: Node2D
@@ -55,6 +58,10 @@ var move_hold_dir := 0.0
 var score_label: Label
 var best_label: Label
 var message_label: Label
+var game_over_page: Control
+var game_over_score_label: Label
+var game_over_best_label: Label
+var doodle_font: Font
 
 
 func _ready() -> void:
@@ -89,6 +96,11 @@ func _physics_process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
+		if game_over:
+			if event.keycode == KEY_R:
+				reset_game()
+			return
+
 		if event.keycode == KEY_R:
 			reset_game()
 		elif event.keycode == KEY_P:
@@ -111,6 +123,7 @@ func _setup_background() -> void:
 
 	var texture_rect := TextureRect.new()
 	texture_rect.texture = load("res://assets/notebook_background.png")
+	texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	texture_rect.stretch_mode = TextureRect.STRETCH_SCALE
 	texture_rect.size = Vector2(GAME_WIDTH, GAME_HEIGHT)
 	texture_rect.position = Vector2.ZERO
@@ -137,6 +150,8 @@ func _setup_world() -> void:
 
 
 func _setup_ui() -> void:
+	doodle_font = _create_doodle_font()
+
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
@@ -173,6 +188,116 @@ func _setup_ui() -> void:
 	message_label.add_theme_constant_override("shadow_offset_y", 2)
 	layer.add_child(message_label)
 
+	_setup_game_over_page(layer)
+
+
+func _setup_game_over_page(layer: CanvasLayer) -> void:
+	game_over_page = Control.new()
+	game_over_page.visible = false
+	game_over_page.mouse_filter = Control.MOUSE_FILTER_STOP
+	game_over_page.size = Vector2(GAME_WIDTH, GAME_HEIGHT)
+	game_over_page.gui_input.connect(Callable(self, "_on_game_over_page_gui_input"))
+	layer.add_child(game_over_page)
+
+	var page_background := TextureRect.new()
+	page_background.texture = GAME_OVER_TEXTURE
+	page_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	page_background.stretch_mode = TextureRect.STRETCH_SCALE
+	page_background.size = Vector2(GAME_WIDTH, GAME_HEIGHT)
+	page_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game_over_page.add_child(page_background)
+
+	var panel := TextureRect.new()
+	panel.texture = GAME_OVER_PANEL_TEXTURE
+	panel.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	panel.stretch_mode = TextureRect.STRETCH_SCALE
+	panel.position = Vector2(34, 132)
+	panel.size = Vector2(412, 282)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game_over_page.add_child(panel)
+
+	var title_label := Label.new()
+	title_label.text = "Oops!"
+	title_label.position = Vector2(72, 176)
+	title_label.size = Vector2(336, 68)
+	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title_label.add_theme_font_override("font", doodle_font)
+	title_label.add_theme_font_size_override("font_size", 58)
+	title_label.add_theme_color_override("font_color", Color("#E84D3D"))
+	title_label.add_theme_color_override("font_outline_color", Color("#FFFFFF"))
+	title_label.add_theme_constant_override("outline_size", 8)
+	title_label.add_theme_color_override("font_shadow_color", Color(0.05, 0.08, 0.10, 0.25))
+	title_label.add_theme_constant_override("shadow_offset_x", 3)
+	title_label.add_theme_constant_override("shadow_offset_y", 4)
+	game_over_page.add_child(title_label)
+
+	game_over_score_label = Label.new()
+	game_over_score_label.position = Vector2(76, 254)
+	game_over_score_label.size = Vector2(328, 56)
+	game_over_score_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game_over_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game_over_score_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	game_over_score_label.add_theme_font_override("font", doodle_font)
+	game_over_score_label.add_theme_font_size_override("font_size", 34)
+	game_over_score_label.add_theme_color_override("font_color", Color("#159C83"))
+	game_over_score_label.add_theme_color_override("font_outline_color", Color("#FFFFFF"))
+	game_over_score_label.add_theme_constant_override("outline_size", 5)
+	game_over_page.add_child(game_over_score_label)
+
+	game_over_best_label = Label.new()
+	game_over_best_label.position = Vector2(76, 314)
+	game_over_best_label.size = Vector2(328, 42)
+	game_over_best_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	game_over_best_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game_over_best_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	game_over_best_label.add_theme_font_override("font", doodle_font)
+	game_over_best_label.add_theme_font_size_override("font_size", 24)
+	game_over_best_label.add_theme_color_override("font_color", Color("#496780"))
+	game_over_best_label.add_theme_color_override("font_outline_color", Color("#FFFFFF"))
+	game_over_best_label.add_theme_constant_override("outline_size", 4)
+	game_over_page.add_child(game_over_best_label)
+
+	var retry_button := TextureRect.new()
+	retry_button.texture = RETRY_BUTTON_TEXTURE
+	retry_button.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	retry_button.stretch_mode = TextureRect.STRETCH_SCALE
+	retry_button.position = Vector2(126, 438)
+	retry_button.size = Vector2(228, 82)
+	retry_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	retry_button.gui_input.connect(Callable(self, "_on_retry_button_gui_input"))
+	game_over_page.add_child(retry_button)
+
+	var retry_label := Label.new()
+	retry_label.text = "Try Again"
+	retry_label.size = retry_button.size
+	retry_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	retry_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	retry_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	retry_label.add_theme_font_override("font", doodle_font)
+	retry_label.add_theme_font_size_override("font_size", 27)
+	retry_label.add_theme_color_override("font_color", Color("#23364A"))
+	retry_label.add_theme_color_override("font_outline_color", Color("#FFFFFF"))
+	retry_label.add_theme_constant_override("outline_size", 3)
+	retry_button.add_child(retry_label)
+
+
+func _create_doodle_font() -> Font:
+	var font := SystemFont.new()
+	font.font_names = PackedStringArray(["Marker Felt", "Chalkboard SE", "Comic Sans MS"])
+	return font
+
+
+func _on_game_over_page_gui_input(event: InputEvent) -> void:
+	if game_over and event is InputEventMouseButton and event.pressed:
+		reset_game()
+
+
+func _on_retry_button_gui_input(event: InputEvent) -> void:
+	if game_over and event is InputEventMouseButton and event.pressed:
+		reset_game()
+
 
 func reset_game() -> void:
 	for platform in platforms:
@@ -196,6 +321,7 @@ func reset_game() -> void:
 	camera.position = Vector2(GAME_WIDTH * 0.5, camera_y)
 	highest_platform_y = 680.0
 	message_label.visible = false
+	game_over_page.visible = false
 
 	_create_platform(GAME_WIDTH * 0.5, 666.0, 108.0, "normal", false)
 	while highest_platform_y > -360.0:
@@ -320,8 +446,9 @@ func _end_game() -> void:
 	game_over = true
 	best_score = max(best_score, score)
 	_update_ui()
-	message_label.visible = true
-	message_label.text = "GAME OVER\nScore " + str(score) + "\nPress R or click to retry"
+	game_over_score_label.text = "Score " + str(score)
+	game_over_best_label.text = "Best " + str(best_score)
+	game_over_page.visible = true
 	_spawn_burst(player_pos, 18, 1.3)
 
 
