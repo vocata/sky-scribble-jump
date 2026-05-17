@@ -11,17 +11,26 @@ const BASE_SPEED_X := 230.0
 const SPEED_TILT_REF := 520.0
 const HOLD_LOG_GROWTH := 14.0
 const HOLD_LOG_BOOST := 185.0
-const JUMP_SPEED := -590.0
+const JUMP_SPEED := -620.0
 const SPRING_SPEED := -1120.0
 const SPRING_HIT_RADIUS := 38.0
+const LAUNCHER_SPEED := -1420.0
+const LAUNCHER_SIDE_SPEED := 260.0
+const LAUNCHER_HIT_RADIUS := 28.0
 const PLATFORM_SPRITE_WIDTH := 128.0
 const PLATFORM_SPRITE_HEIGHT := 40.0
 const PLAYER_BASE_SCALE := Vector2(0.92, 0.92)
 const SPRING_BASE_SCALE := Vector2(0.58, 0.58)
+const LAUNCHER_BASE_SCALE := Vector2(0.46, 0.46)
 const SPRING_VISUAL_HEIGHT := 31.9
 const SPRING_SEAT_Y := 7.0
 const SPRING_BASE_Y := -8.95
 const SPRING_TOP_OFFSET := -25.0
+const LAUNCHER_BASE_Y := -17.0
+const LAUNCHER_ENTRY_OFFSET_Y := -36.0
+const LAUNCHER_MOUTH_SIDE_OFFSET := 4.0
+const LAUNCHER_ENTER_TIME := 0.20
+const LAUNCHER_CHARGE_TIME := 0.48
 const HUD_HEIGHT := 58.0
 
 const PLAYER_TEXTURE := preload("res://assets/generated/sprites/player.png")
@@ -29,6 +38,7 @@ const PLATFORM_NORMAL_TEXTURE := preload("res://assets/generated/sprites/platfor
 const PLATFORM_MOVING_TEXTURE := preload("res://assets/generated/sprites/platform_moving.png")
 const PLATFORM_FRAGILE_TEXTURE := preload("res://assets/generated/sprites/platform_fragile.png")
 const SPRING_TEXTURE := preload("res://assets/generated/sprites/spring.png")
+const LAUNCHER_TEXTURE := preload("res://assets/generated/sprites/launcher.png")
 const SPARKLE_TEXTURE := preload("res://assets/generated/sprites/sparkle.png")
 const GAME_OVER_TEXTURE := preload("res://assets/generated/sprites/game_over.png")
 const GAME_OVER_PANEL_TEXTURE := preload("res://assets/generated/sprites/game_over_panel.png")
@@ -54,6 +64,13 @@ var player_art: Sprite2D
 var player_squash_time := 0.0
 var move_hold_time := 0.0
 var move_hold_dir := 0.0
+var launcher_sequence_active := false
+var launcher_timer := 0.0
+var launcher_start_pos := Vector2.ZERO
+var launcher_entry_pos := Vector2.ZERO
+var launcher_hidden_pos := Vector2.ZERO
+var launcher_fire_dir := 1.0
+var launcher_active_platform: Dictionary = {}
 
 var score_label: Label
 var best_label: Label
@@ -61,6 +78,9 @@ var message_label: Label
 var game_over_page: Control
 var game_over_score_label: Label
 var game_over_best_label: Label
+var retry_button: TextureRect
+var retry_button_tween: Tween
+var retry_button_armed := false
 var doodle_font: Font
 
 
@@ -81,6 +101,17 @@ func _physics_process(delta: float) -> void:
 		_update_particles(delta)
 		return
 
+	if launcher_sequence_active:
+		_update_platforms(delta)
+		_update_launcher_sequence(delta)
+		_update_player_visual(delta)
+		_update_camera()
+		_generate_platforms()
+		_cleanup_world()
+		_update_score()
+		_update_particles(delta)
+		return
+
 	var old_y: float = player_pos.y
 	_handle_movement(delta)
 	_update_platforms(delta)
@@ -97,8 +128,6 @@ func _physics_process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if game_over:
-			if event.keycode == KEY_R:
-				reset_game()
 			return
 
 		if event.keycode == KEY_R:
@@ -107,9 +136,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			paused = not paused
 			message_label.visible = paused
 			message_label.text = "PAUSED\nPress P to continue"
-
-	if game_over and event is InputEventMouseButton and event.pressed:
-		reset_game()
 
 
 func _setup_view() -> void:
@@ -196,7 +222,6 @@ func _setup_game_over_page(layer: CanvasLayer) -> void:
 	game_over_page.visible = false
 	game_over_page.mouse_filter = Control.MOUSE_FILTER_STOP
 	game_over_page.size = Vector2(GAME_WIDTH, GAME_HEIGHT)
-	game_over_page.gui_input.connect(Callable(self, "_on_game_over_page_gui_input"))
 	layer.add_child(game_over_page)
 
 	var page_background := TextureRect.new()
@@ -259,14 +284,16 @@ func _setup_game_over_page(layer: CanvasLayer) -> void:
 	game_over_best_label.add_theme_constant_override("outline_size", 4)
 	game_over_page.add_child(game_over_best_label)
 
-	var retry_button := TextureRect.new()
+	retry_button = TextureRect.new()
 	retry_button.texture = RETRY_BUTTON_TEXTURE
 	retry_button.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	retry_button.stretch_mode = TextureRect.STRETCH_SCALE
 	retry_button.position = Vector2(126, 438)
 	retry_button.size = Vector2(228, 82)
+	retry_button.pivot_offset = retry_button.size * 0.5
 	retry_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	retry_button.gui_input.connect(Callable(self, "_on_retry_button_gui_input"))
+	retry_button.mouse_exited.connect(Callable(self, "_on_retry_button_mouse_exited"))
 	game_over_page.add_child(retry_button)
 
 	var retry_label := Label.new()
@@ -289,14 +316,42 @@ func _create_doodle_font() -> Font:
 	return font
 
 
-func _on_game_over_page_gui_input(event: InputEvent) -> void:
-	if game_over and event is InputEventMouseButton and event.pressed:
-		reset_game()
-
-
 func _on_retry_button_gui_input(event: InputEvent) -> void:
-	if game_over and event is InputEventMouseButton and event.pressed:
-		reset_game()
+	if not game_over or not event is InputEventMouseButton:
+		return
+
+	if event.button_index != MOUSE_BUTTON_LEFT:
+		return
+
+	if event.pressed:
+		retry_button_armed = true
+		_set_retry_button_pressed(true)
+	else:
+		var should_retry := retry_button_armed
+		retry_button_armed = false
+		_set_retry_button_pressed(false)
+		if should_retry:
+			reset_game()
+
+
+func _on_retry_button_mouse_exited() -> void:
+	retry_button_armed = false
+	_set_retry_button_pressed(false)
+
+
+func _set_retry_button_pressed(pressed: bool) -> void:
+	if retry_button == null:
+		return
+
+	if retry_button_tween != null and retry_button_tween.is_valid():
+		retry_button_tween.kill()
+
+	var target_scale := Vector2(0.92, 0.92) if pressed else Vector2.ONE
+	var target_rotation := deg_to_rad(-2.5) if pressed else 0.0
+	retry_button_tween = create_tween()
+	retry_button_tween.set_parallel(true)
+	retry_button_tween.tween_property(retry_button, "scale", target_scale, 0.06)
+	retry_button_tween.tween_property(retry_button, "rotation", target_rotation, 0.06)
 
 
 func reset_game() -> void:
@@ -312,6 +367,9 @@ func reset_game() -> void:
 	player_squash_time = 0.0
 	move_hold_time = 0.0
 	move_hold_dir = 0.0
+	launcher_sequence_active = false
+	launcher_timer = 0.0
+	launcher_active_platform = {}
 	start_y = player_pos.y
 	max_height = 0.0
 	score = 0
@@ -322,8 +380,16 @@ func reset_game() -> void:
 	highest_platform_y = 680.0
 	message_label.visible = false
 	game_over_page.visible = false
+	retry_button_armed = false
+	if retry_button_tween != null and retry_button_tween.is_valid():
+		retry_button_tween.kill()
+	if retry_button != null:
+		retry_button.scale = Vector2.ONE
+		retry_button.rotation = 0.0
+	player.scale = Vector2.ONE
+	player.visible = true
 
-	_create_platform(GAME_WIDTH * 0.5, 666.0, 108.0, "normal", false)
+	_create_platform(GAME_WIDTH * 0.5, 666.0, 108.0, "normal", false, false)
 	while highest_platform_y > -360.0:
 		_spawn_next_platform()
 
@@ -409,6 +475,17 @@ func _check_platform_landings(old_y: float) -> void:
 				player.position = player_pos
 				return
 
+		if bool(platform["has_launcher"]):
+			var launcher_x: float = platform_x + float(platform["launcher_offset"])
+			var launch_dir: float = float(platform["launcher_dir"])
+			var launcher_entry_y: float = platform_y + LAUNCHER_ENTRY_OFFSET_Y
+			var launcher_entry_x: float = launcher_x + launch_dir * LAUNCHER_MOUTH_SIDE_OFFSET
+			var launcher_horizontal_hit: bool = abs(player_pos.x - launcher_entry_x) < LAUNCHER_HIT_RADIUS
+			var launcher_vertical_hit: bool = old_feet <= launcher_entry_y and new_feet >= launcher_entry_y and player_pos.y < launcher_entry_y
+			if launcher_horizontal_hit and launcher_vertical_hit:
+				_trigger_launcher(platform, Vector2(launcher_entry_x, launcher_entry_y), launch_dir)
+				return
+
 		if horizontal_hit and vertical_hit:
 			if String(platform["type"]) == "fragile":
 				_break_platform(platform)
@@ -422,6 +499,75 @@ func _check_platform_landings(old_y: float) -> void:
 				player_pos.y = platform_y - PLAYER_HALF_H
 				player.position = player_pos
 			return
+
+
+func _trigger_launcher(platform: Dictionary, entry_pos: Vector2, launch_dir: float) -> void:
+	launcher_sequence_active = true
+	launcher_timer = 0.0
+	launcher_start_pos = player_pos
+	launcher_entry_pos = entry_pos
+	launcher_hidden_pos = entry_pos + Vector2(launch_dir * 7.0, 17.0)
+	launcher_fire_dir = launch_dir
+	launcher_active_platform = platform
+	launcher_active_platform["launcher_charge"] = 0.0
+	player_velocity = Vector2.ZERO
+	move_hold_time = 0.0
+	move_hold_dir = 0.0
+	player.scale = Vector2.ONE
+	player.z_index = 6
+	player.visible = true
+	_spawn_burst(entry_pos, 10, 0.8)
+
+
+func _update_launcher_sequence(delta: float) -> void:
+	launcher_timer += delta
+
+	if not launcher_active_platform.is_empty() and not bool(launcher_active_platform["broken"]):
+		var platform_x: float = float(launcher_active_platform["x"])
+		var platform_y: float = float(launcher_active_platform["y"])
+		var launcher_x: float = platform_x + float(launcher_active_platform["launcher_offset"])
+		launcher_entry_pos = Vector2(
+			launcher_x + launcher_fire_dir * LAUNCHER_MOUTH_SIDE_OFFSET,
+			platform_y + LAUNCHER_ENTRY_OFFSET_Y
+		)
+		launcher_hidden_pos = launcher_entry_pos + Vector2(launcher_fire_dir * 7.0, 17.0)
+
+	if launcher_timer <= LAUNCHER_ENTER_TIME:
+		var t: float = clamp(launcher_timer / LAUNCHER_ENTER_TIME, 0.0, 1.0)
+		var eased: float = t * t * (3.0 - 2.0 * t)
+		player_pos = launcher_start_pos.lerp(launcher_hidden_pos, eased)
+		player.position = player_pos
+		player.scale = Vector2.ONE.lerp(Vector2(0.20, 0.20), eased)
+		player.rotation = lerp(player.rotation, deg_to_rad(launcher_fire_dir * 18.0), 0.34)
+		player.z_index = 6 if t < 0.62 else 4
+		player.visible = true
+		return
+
+	player.visible = false
+	player.scale = Vector2.ONE
+
+	var charge_t: float = clamp((launcher_timer - LAUNCHER_ENTER_TIME) / LAUNCHER_CHARGE_TIME, 0.0, 1.0)
+	var charge_eased: float = charge_t * charge_t * (3.0 - 2.0 * charge_t)
+	if not launcher_active_platform.is_empty():
+		launcher_active_platform["launcher_charge"] = charge_eased
+
+	if charge_t >= 1.0:
+		_fire_from_launcher()
+
+
+func _fire_from_launcher() -> void:
+	launcher_sequence_active = false
+	player.visible = true
+	player.scale = Vector2.ONE
+	player.z_index = 20
+	player_pos = launcher_entry_pos + Vector2(launcher_fire_dir * 14.0, -8.0)
+	player_velocity = Vector2(launcher_fire_dir * LAUNCHER_SIDE_SPEED, LAUNCHER_SPEED)
+	player.position = player_pos
+	player.rotation = deg_to_rad(launcher_fire_dir * 16.0)
+	player_squash_time = 0.28
+	if not launcher_active_platform.is_empty():
+		launcher_active_platform["launcher_charge"] = 1.0
+	_spawn_burst(launcher_entry_pos, 34, 2.1)
 
 
 func _update_camera() -> void:
@@ -473,11 +619,12 @@ func _spawn_next_platform() -> void:
 	elif score > 700 and roll < 0.31:
 		platform_type = "fragile"
 
-	var has_spring: bool = platform_type != "fragile" and rng.randf() < 0.11 + difficulty * 0.04
-	_create_platform(x, highest_platform_y, width, platform_type, has_spring)
+	var has_launcher: bool = platform_type != "fragile" and score > 220 and rng.randf() < 0.055 + difficulty * 0.035
+	var has_spring: bool = not has_launcher and platform_type != "fragile" and rng.randf() < 0.11 + difficulty * 0.04
+	_create_platform(x, highest_platform_y, width, platform_type, has_spring, has_launcher)
 
 
-func _create_platform(x: float, y: float, width: float, platform_type: String, has_spring: bool) -> void:
+func _create_platform(x: float, y: float, width: float, platform_type: String, has_spring: bool, has_launcher: bool) -> void:
 	var node := Node2D.new()
 	node.position = Vector2(x, y)
 	world.add_child(node)
@@ -499,6 +646,17 @@ func _create_platform(x: float, y: float, width: float, platform_type: String, h
 		spring_node.z_index = 4
 		node.add_child(spring_node)
 
+	var launcher_node: Node2D = null
+	var launcher_offset := 0.0
+	var launcher_dir := 1.0
+	if has_launcher:
+		launcher_dir = 1.0 if x < GAME_WIDTH * 0.5 else -1.0
+		launcher_offset = clamp(launcher_dir * width * 0.24, -width * 0.26, width * 0.26)
+		launcher_node = _create_launcher_visual(launcher_dir)
+		launcher_node.position = Vector2(launcher_offset, LAUNCHER_BASE_Y)
+		launcher_node.z_index = 5
+		node.add_child(launcher_node)
+
 	var speed := 0.0
 	if platform_type == "moving":
 		speed = rng.randf_range(55.0, 105.0) * (-1.0 if rng.randf() < 0.5 else 1.0)
@@ -510,12 +668,17 @@ func _create_platform(x: float, y: float, width: float, platform_type: String, h
 		"width": width,
 		"type": platform_type,
 		"speed": speed,
-			"has_spring": has_spring,
-			"spring_node": spring_node,
-			"spring_base_y": SPRING_BASE_Y,
-			"spring_compress": 0.0,
-			"broken": false,
-			"fall_speed": 0.0,
+		"has_spring": has_spring,
+		"spring_node": spring_node,
+		"spring_base_y": SPRING_BASE_Y,
+		"spring_compress": 0.0,
+		"has_launcher": has_launcher,
+		"launcher_node": launcher_node,
+		"launcher_offset": launcher_offset,
+		"launcher_dir": launcher_dir,
+		"launcher_charge": 0.0,
+		"broken": false,
+		"fall_speed": 0.0,
 		})
 
 
@@ -550,6 +713,20 @@ func _update_platforms(delta: float) -> void:
 			var current_height := SPRING_VISUAL_HEIGHT * (1.0 - compression * 0.52)
 			spring.position.y = SPRING_SEAT_Y - current_height * 0.5
 
+		if bool(platform["has_launcher"]) and platform["launcher_node"] != null:
+			var launcher: Node2D = platform["launcher_node"]
+			var charge: float = platform["launcher_charge"]
+			charge = max(0.0, charge - delta * 4.0)
+			platform["launcher_charge"] = charge
+			var direction: float = float(platform["launcher_dir"])
+			var shake: float = sin(charge * TAU * 3.0) * charge
+			launcher.position.y = LAUNCHER_BASE_Y + charge * 8.0
+			launcher.scale = Vector2(
+				-direction * LAUNCHER_BASE_SCALE.x * (1.0 + charge * 0.16),
+				LAUNCHER_BASE_SCALE.y * (1.0 - charge * 0.22)
+			)
+			launcher.rotation = deg_to_rad(direction * shake * 3.5)
+
 
 func _break_platform(platform: Dictionary) -> void:
 	platform["broken"] = true
@@ -580,6 +757,14 @@ func _create_spring_visual() -> Node2D:
 	var node := Node2D.new()
 	_add_sprite_with_shadow(node, SPRING_TEXTURE, Vector2(2.0, 3.0), 0.18)
 	node.scale = SPRING_BASE_SCALE
+
+	return node
+
+
+func _create_launcher_visual(launch_dir: float) -> Node2D:
+	var node := Node2D.new()
+	_add_sprite_with_shadow(node, LAUNCHER_TEXTURE, Vector2(3.0, 4.0), 0.16)
+	node.scale = Vector2(-launch_dir * LAUNCHER_BASE_SCALE.x, LAUNCHER_BASE_SCALE.y)
 
 	return node
 
