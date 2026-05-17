@@ -13,7 +13,7 @@ config_version=5
 config/name="Sky Scribble Jump"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.6")
-config/icon="res://assets/generated/sprites/player.png"
+config/icon="res://assets/art/characters/player.png"
 
 [display]
 

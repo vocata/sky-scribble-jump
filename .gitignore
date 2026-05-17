@@ -1,3 +1,11 @@
+# Godot editor and import cache
 .godot/
-.DS_Store
+.import/
+
+# Local exports
 build/
+*.app/
+
+# macOS metadata
+.DS_Store
+**/.DS_Store

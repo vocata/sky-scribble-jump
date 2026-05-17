@@ -1,9 +1,9 @@
-GODOT ?= /Applications/Godot.app/Contents/MacOS/Godot
+GODOT ?= godot
 PROJECT_DIR := $(CURDIR)
 EXPORT_TMP := /tmp/sky_scribble_jump_export
 MACOS_CODESIGN_IDENTITY ?= -
 
-.PHONY: run edit check import export-macos
+.PHONY: run edit check import clean export-macos
 
 run:
 	$(GODOT) --path "$(PROJECT_DIR)"
@@ -12,10 +12,13 @@ edit:
 	$(GODOT) --editor --path "$(PROJECT_DIR)"
 
 check:
-	godot --headless --path "$(PROJECT_DIR)" --quit-after 2
+	$(GODOT) --headless --path "$(PROJECT_DIR)" --quit-after 2
 
 import:
-	godot --headless --path "$(PROJECT_DIR)" --import
+	$(GODOT) --headless --path "$(PROJECT_DIR)" --import
+
+clean:
+	rm -rf build "$(EXPORT_TMP)"
 
 export-macos:
 	rm -rf build "$(EXPORT_TMP)"

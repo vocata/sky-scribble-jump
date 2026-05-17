@@ -33,18 +33,19 @@ const LAUNCHER_ENTER_TIME := 0.20
 const LAUNCHER_CHARGE_TIME := 0.48
 const HUD_HEIGHT := 58.0
 
-const PLAYER_TEXTURE := preload("res://assets/generated/sprites/player.png")
-const PLATFORM_NORMAL_TEXTURE := preload("res://assets/generated/sprites/platform_normal.png")
-const PLATFORM_MOVING_TEXTURE := preload("res://assets/generated/sprites/platform_moving.png")
-const PLATFORM_FRAGILE_TEXTURE := preload("res://assets/generated/sprites/platform_fragile.png")
-const SPRING_TEXTURE := preload("res://assets/generated/sprites/spring.png")
-const LAUNCHER_TEXTURE := preload("res://assets/generated/sprites/launcher.png")
-const SPARKLE_TEXTURE := preload("res://assets/generated/sprites/sparkle.png")
-const START_SCREEN_TEXTURE := preload("res://assets/generated/sprites/start_screen.png")
-const START_BUTTON_TEXTURE := preload("res://assets/generated/sprites/start_button.png")
-const GAME_OVER_TEXTURE := preload("res://assets/generated/sprites/game_over.png")
-const GAME_OVER_PANEL_TEXTURE := preload("res://assets/generated/sprites/game_over_panel.png")
-const RETRY_BUTTON_TEXTURE := preload("res://assets/generated/sprites/retry_button.png")
+const GAMEPLAY_BACKGROUND_TEXTURE := preload("res://assets/art/backgrounds/gameplay_background.png")
+const PLAYER_TEXTURE := preload("res://assets/art/characters/player.png")
+const SPARKLE_TEXTURE := preload("res://assets/art/effects/sparkle.png")
+const PLATFORM_NORMAL_TEXTURE := preload("res://assets/art/platforms/platform_green.png")
+const PLATFORM_MOVING_TEXTURE := preload("res://assets/art/platforms/platform_blue_moving.png")
+const PLATFORM_FRAGILE_TEXTURE := preload("res://assets/art/platforms/platform_red_fragile.png")
+const SPRING_TEXTURE := preload("res://assets/art/props/spring.png")
+const LAUNCHER_TEXTURE := preload("res://assets/art/props/launcher.png")
+const START_SCREEN_TEXTURE := preload("res://assets/art/screens/start_screen.png")
+const GAME_OVER_TEXTURE := preload("res://assets/art/screens/game_over_screen.png")
+const START_BUTTON_TEXTURE := preload("res://assets/art/ui/button_start.png")
+const RETRY_BUTTON_TEXTURE := preload("res://assets/art/ui/button_retry.png")
+const GAME_OVER_PANEL_TEXTURE := preload("res://assets/art/ui/panel_game_over.png")
 
 var rng := RandomNumberGenerator.new()
 var world: Node2D
@@ -161,7 +162,7 @@ func _setup_background() -> void:
 	add_child(layer)
 
 	var texture_rect := TextureRect.new()
-	texture_rect.texture = load("res://assets/notebook_background.png")
+	texture_rect.texture = GAMEPLAY_BACKGROUND_TEXTURE
 	texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	texture_rect.stretch_mode = TextureRect.STRETCH_SCALE
 	texture_rect.size = Vector2(GAME_WIDTH, GAME_HEIGHT)

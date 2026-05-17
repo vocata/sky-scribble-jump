@@ -1,0 +1,16 @@
+* text=auto eol=lf
+
+*.gd text
+*.tscn text
+*.tres text
+*.godot text
+*.cfg text
+*.import text
+*.md text
+Makefile text
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.zip binary
