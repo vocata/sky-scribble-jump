@@ -40,6 +40,8 @@ const PLATFORM_FRAGILE_TEXTURE := preload("res://assets/generated/sprites/platfo
 const SPRING_TEXTURE := preload("res://assets/generated/sprites/spring.png")
 const LAUNCHER_TEXTURE := preload("res://assets/generated/sprites/launcher.png")
 const SPARKLE_TEXTURE := preload("res://assets/generated/sprites/sparkle.png")
+const START_SCREEN_TEXTURE := preload("res://assets/generated/sprites/start_screen.png")
+const START_BUTTON_TEXTURE := preload("res://assets/generated/sprites/start_button.png")
 const GAME_OVER_TEXTURE := preload("res://assets/generated/sprites/game_over.png")
 const GAME_OVER_PANEL_TEXTURE := preload("res://assets/generated/sprites/game_over_panel.png")
 const RETRY_BUTTON_TEXTURE := preload("res://assets/generated/sprites/retry_button.png")
@@ -58,6 +60,7 @@ var start_y := 610.0
 var max_height := 0.0
 var score := 0
 var best_score := 0
+var game_started := false
 var game_over := false
 var paused := false
 var player_art: Sprite2D
@@ -75,6 +78,10 @@ var launcher_active_platform: Dictionary = {}
 var score_label: Label
 var best_label: Label
 var message_label: Label
+var start_page: Control
+var start_button: TextureRect
+var start_button_tween: Tween
+var start_button_armed := false
 var game_over_page: Control
 var game_over_score_label: Label
 var game_over_best_label: Label
@@ -90,10 +97,13 @@ func _ready() -> void:
 	_setup_background()
 	_setup_world()
 	_setup_ui()
-	reset_game()
+	_show_start_page()
 
 
 func _physics_process(delta: float) -> void:
+	if not game_started:
+		return
+
 	if paused:
 		return
 
@@ -126,6 +136,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not game_started:
+		return
+
 	if event is InputEventKey and event.pressed and not event.echo:
 		if game_over:
 			return
@@ -215,6 +228,65 @@ func _setup_ui() -> void:
 	layer.add_child(message_label)
 
 	_setup_game_over_page(layer)
+	_setup_start_page(layer)
+
+
+func _setup_start_page(layer: CanvasLayer) -> void:
+	start_page = Control.new()
+	start_page.visible = false
+	start_page.mouse_filter = Control.MOUSE_FILTER_STOP
+	start_page.size = Vector2(GAME_WIDTH, GAME_HEIGHT)
+	layer.add_child(start_page)
+
+	var page_background := TextureRect.new()
+	page_background.texture = START_SCREEN_TEXTURE
+	page_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	page_background.stretch_mode = TextureRect.STRETCH_SCALE
+	page_background.size = Vector2(GAME_WIDTH, GAME_HEIGHT)
+	page_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	start_page.add_child(page_background)
+
+	var title_label := Label.new()
+	title_label.text = "Sky Scribble\nJump"
+	title_label.position = Vector2(42, 126)
+	title_label.size = Vector2(396, 132)
+	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title_label.add_theme_font_override("font", doodle_font)
+	title_label.add_theme_font_size_override("font_size", 46)
+	title_label.add_theme_color_override("font_color", Color("#E84D3D"))
+	title_label.add_theme_color_override("font_outline_color", Color("#FFFFFF"))
+	title_label.add_theme_constant_override("outline_size", 8)
+	title_label.add_theme_color_override("font_shadow_color", Color(0.05, 0.08, 0.10, 0.25))
+	title_label.add_theme_constant_override("shadow_offset_x", 3)
+	title_label.add_theme_constant_override("shadow_offset_y", 4)
+	start_page.add_child(title_label)
+
+	start_button = TextureRect.new()
+	start_button.texture = START_BUTTON_TEXTURE
+	start_button.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	start_button.stretch_mode = TextureRect.STRETCH_SCALE
+	start_button.position = Vector2(90, 416)
+	start_button.size = Vector2(300, 112)
+	start_button.pivot_offset = start_button.size * 0.5
+	start_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	start_button.gui_input.connect(Callable(self, "_on_start_button_gui_input"))
+	start_button.mouse_exited.connect(Callable(self, "_on_start_button_mouse_exited"))
+	start_page.add_child(start_button)
+
+	var start_label := Label.new()
+	start_label.text = "Start"
+	start_label.size = start_button.size
+	start_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	start_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	start_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	start_label.add_theme_font_override("font", doodle_font)
+	start_label.add_theme_font_size_override("font_size", 34)
+	start_label.add_theme_color_override("font_color", Color("#23364A"))
+	start_label.add_theme_color_override("font_outline_color", Color("#FFFFFF"))
+	start_label.add_theme_constant_override("outline_size", 4)
+	start_button.add_child(start_label)
 
 
 func _setup_game_over_page(layer: CanvasLayer) -> void:
@@ -316,6 +388,65 @@ func _create_doodle_font() -> Font:
 	return font
 
 
+func _show_start_page() -> void:
+	game_started = false
+	game_over = false
+	paused = false
+	score = 0
+	max_height = 0.0
+	score_label.text = "0"
+	best_label.text = "BEST " + str(best_score)
+	message_label.visible = false
+	game_over_page.visible = false
+	start_button_armed = false
+	if start_button_tween != null and start_button_tween.is_valid():
+		start_button_tween.kill()
+	if start_button != null:
+		start_button.scale = Vector2.ONE
+		start_button.rotation = 0.0
+	if player != null:
+		player.visible = false
+	start_page.visible = true
+
+
+func _on_start_button_gui_input(event: InputEvent) -> void:
+	if game_started or not event is InputEventMouseButton:
+		return
+
+	if event.button_index != MOUSE_BUTTON_LEFT:
+		return
+
+	if event.pressed:
+		start_button_armed = true
+		_set_start_button_pressed(true)
+	else:
+		var should_start := start_button_armed
+		start_button_armed = false
+		_set_start_button_pressed(false)
+		if should_start:
+			reset_game()
+
+
+func _on_start_button_mouse_exited() -> void:
+	start_button_armed = false
+	_set_start_button_pressed(false)
+
+
+func _set_start_button_pressed(pressed: bool) -> void:
+	if start_button == null:
+		return
+
+	if start_button_tween != null and start_button_tween.is_valid():
+		start_button_tween.kill()
+
+	var target_scale := Vector2(0.92, 0.92) if pressed else Vector2.ONE
+	var target_rotation := deg_to_rad(2.5) if pressed else 0.0
+	start_button_tween = create_tween()
+	start_button_tween.set_parallel(true)
+	start_button_tween.tween_property(start_button, "scale", target_scale, 0.06)
+	start_button_tween.tween_property(start_button, "rotation", target_rotation, 0.06)
+
+
 func _on_retry_button_gui_input(event: InputEvent) -> void:
 	if not game_over or not event is InputEventMouseButton:
 		return
@@ -373,12 +504,20 @@ func reset_game() -> void:
 	start_y = player_pos.y
 	max_height = 0.0
 	score = 0
+	game_started = true
 	game_over = false
 	paused = false
 	camera_y = GAME_HEIGHT * 0.5
 	camera.position = Vector2(GAME_WIDTH * 0.5, camera_y)
 	highest_platform_y = 680.0
 	message_label.visible = false
+	start_page.visible = false
+	start_button_armed = false
+	if start_button_tween != null and start_button_tween.is_valid():
+		start_button_tween.kill()
+	if start_button != null:
+		start_button.scale = Vector2.ONE
+		start_button.rotation = 0.0
 	game_over_page.visible = false
 	retry_button_armed = false
 	if retry_button_tween != null and retry_button_tween.is_valid():
