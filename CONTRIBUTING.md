@@ -9,12 +9,18 @@ Thanks for taking a look at Sky Scribble Jump. This project is intentionally sma
 3. Use `make run` for manual gameplay testing.
 4. Use `make import` after adding or moving image assets.
 
+See `docs/TESTING.md` for the release and gameplay testing checklist.
+
 ## Code Style
 
 - Keep `scripts/Main.gd` focused on game flow, camera, spawning, and state transitions.
 - Put player behavior under `scripts/actors/`.
 - Put platform, prop, and particle gameplay behavior under `scripts/gameplay/`.
 - Put screen and HUD behavior under `scripts/ui/`.
+- Keep persistent node structure in `.tscn` files and use scripts for behavior and runtime state.
+- Route platform probability, spacing, and cleanup changes through `PlatformSpawner.gd`.
+- Route launcher entry, charge, and firing timing changes through `LauncherSequence.gd`.
+- Keep shared gameplay tuning values in `resources/game_tuning.tres` when they should be editable in the Godot inspector.
 - Prefer small, direct changes over broad rewrites.
 - Keep constants near the top of the script and name them by gameplay intent.
 - Do not commit `.godot/`, `build/`, `.DS_Store`, or local export artifacts.

@@ -62,7 +62,7 @@ func setup(
 	_build_props()
 
 
-func update_platform(delta: float, game_width: float, gravity: float) -> void:
+func update_platform(delta: float, game_width: float, gravity: float, edge_padding: float = 8.0) -> void:
 	if broken:
 		fall_speed += gravity * delta * 0.65
 		position.y += fall_speed * delta
@@ -73,9 +73,9 @@ func update_platform(delta: float, game_width: float, gravity: float) -> void:
 	if platform_type == TYPE_MOVING:
 		position.x += speed * delta
 		var half_width: float = platform_width * 0.5
-		if position.x < half_width + 8.0 or position.x > game_width - half_width - 8.0:
+		if position.x < half_width + edge_padding or position.x > game_width - half_width - edge_padding:
 			speed *= -1.0
-			position.x = clamp(position.x, half_width + 8.0, game_width - half_width - 8.0)
+			position.x = clamp(position.x, half_width + edge_padding, game_width - half_width - edge_padding)
 
 	_update_spring(delta)
 	_update_launcher(delta)

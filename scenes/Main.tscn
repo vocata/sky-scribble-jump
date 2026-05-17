@@ -1,6 +1,50 @@
-[gd_scene load_steps=2 format=3 uid="uid://sky_scribble_main"]
+[gd_scene load_steps=8 format=3 uid="uid://sky_scribble_main"]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
+[ext_resource type="Texture2D" path="res://assets/art/backgrounds/gameplay_background.png" id="2_background"]
+[ext_resource type="PackedScene" path="res://scenes/ui/GameHUD.tscn" id="3_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/GameOverScreen.tscn" id="4_game_over"]
+[ext_resource type="PackedScene" path="res://scenes/ui/StartScreen.tscn" id="5_start"]
+[ext_resource type="Script" path="res://scripts/gameplay/PlatformSpawner.gd" id="6_spawner"]
+[ext_resource type="Script" path="res://scripts/gameplay/LauncherSequence.gd" id="7_launcher_sequence"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
+
+[node name="BackgroundLayer" type="CanvasLayer" parent="."]
+layer = -10
+
+[node name="GameplayBackground" type="TextureRect" parent="BackgroundLayer"]
+offset_right = 480.0
+offset_bottom = 720.0
+mouse_filter = 2
+texture = ExtResource("2_background")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Wash" type="ColorRect" parent="BackgroundLayer"]
+offset_right = 480.0
+offset_bottom = 720.0
+mouse_filter = 2
+color = Color(1, 1, 1, 0.18)
+
+[node name="World" type="Node2D" parent="."]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(240, 360)
+enabled = true
+
+[node name="PlatformSpawner" type="Node" parent="."]
+script = ExtResource("6_spawner")
+
+[node name="LauncherSequence" type="Node" parent="."]
+script = ExtResource("7_launcher_sequence")
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="GameHUD" parent="UILayer" instance=ExtResource("3_hud")]
+
+[node name="GameOverScreen" parent="UILayer" instance=ExtResource("4_game_over")]
+
+[node name="StartScreen" parent="UILayer" instance=ExtResource("5_start")]

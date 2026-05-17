@@ -2,7 +2,7 @@
 
 Before publishing the repository publicly:
 
-- Choose and add an open-source license.
+- Review the MIT license holder in `LICENSE`.
 - Update `README.md` with screenshots or a gameplay GIF.
 - Confirm whether the bundle identifier in `export_presets.cfg` should stay `com.leixueyue.skyscribblejump`.
 - Run `make check`.

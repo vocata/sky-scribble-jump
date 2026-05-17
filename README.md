@@ -53,7 +53,8 @@ The player auto-jumps when landing on platforms and wraps through the left or ri
 
 - `assets/art/`: runtime artwork used by the game
 - `scenes/`: Godot scenes, grouped by actors, gameplay, and UI
-- `scripts/`: gameplay code, grouped to mirror the scene folders
+- `scripts/`: behavior code, grouped to mirror the scene folders
+- `resources/`: editable Godot resources such as gameplay tuning values
 - `release_notes/`: tagged release notes
 - `docs/`: project documentation for contributors and publishing
 
@@ -65,4 +66,4 @@ See `docs/ASSETS.md` for the current asset inventory and naming rules.
 
 ## License
 
-No open-source license has been selected yet. Add a `LICENSE` file before publishing the repository publicly.
+Sky Scribble Jump is released under the MIT License. See `LICENSE` for details.
