@@ -52,8 +52,8 @@ The player auto-jumps when landing on platforms and wraps through the left or ri
 ## Project Layout
 
 - `assets/art/`: runtime artwork used by the game
-- `scenes/`: Godot scenes
-- `scripts/`: gameplay code
+- `scenes/`: Godot scenes, grouped by actors, gameplay, and UI
+- `scripts/`: gameplay code, grouped to mirror the scene folders
 - `release_notes/`: tagged release notes
 - `docs/`: project documentation for contributors and publishing
 

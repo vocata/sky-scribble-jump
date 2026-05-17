@@ -11,7 +11,10 @@ Thanks for taking a look at Sky Scribble Jump. This project is intentionally sma
 
 ## Code Style
 
-- Keep gameplay code in `scripts/Main.gd` until a feature clearly needs its own module.
+- Keep `scripts/Main.gd` focused on game flow, camera, spawning, and state transitions.
+- Put player behavior under `scripts/actors/`.
+- Put platform, prop, and particle gameplay behavior under `scripts/gameplay/`.
+- Put screen and HUD behavior under `scripts/ui/`.
 - Prefer small, direct changes over broad rewrites.
 - Keep constants near the top of the script and name them by gameplay intent.
 - Do not commit `.godot/`, `build/`, `.DS_Store`, or local export artifacts.
