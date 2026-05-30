@@ -28,6 +28,7 @@ Check these flows:
 - Fragile red platforms break after landing while preserving the normal jump height.
 - Springs visibly compress when landed on, then launch the player higher.
 - Launchers pull the player inside, charge, and fire the player upward.
+- Fire boots appear as a platform pickup, switch the player to the fire-boots sprite, and jet the player straight upward for a short duration.
 - Score increases while climbing and best score updates after failure.
 - Game Over screen blocks accidental restart from random clicks.
 - `Try Again` button restarts the run and shows its pressed animation.

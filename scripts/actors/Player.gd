@@ -12,11 +12,20 @@ const HOLD_LOG_GROWTH := 14.0
 const HOLD_LOG_BOOST := 185.0
 const SPRING_SPEED_REF := -1120.0
 const TEXTURE := preload("res://assets/art/characters/player.png")
+const FIRE_BOOTS_TEXTURES := [
+	preload("res://assets/art/characters/player_fire_boots_flame_short.png"),
+	preload("res://assets/art/characters/player_fire_boots_flame_long.png"),
+]
+const FIRE_BOOTS_BASE_SCALE := BASE_SCALE
+const FIRE_BOOTS_ART_OFFSET := Vector2(-1.0, 22.0)
+const FIRE_BOOTS_FRAME_TIME := 0.08
 
 var velocity := Vector2.ZERO
 var squash_time := 0.0
 var move_hold_time := 0.0
 var move_hold_dir := 0.0
+var fire_boots_time := 0.0
+var fire_boots_anim_time := 0.0
 
 var art: Sprite2D
 
@@ -32,10 +41,13 @@ func reset_to(start_position: Vector2) -> void:
 	squash_time = 0.0
 	move_hold_time = 0.0
 	move_hold_dir = 0.0
+	fire_boots_time = 0.0
+	fire_boots_anim_time = 0.0
 	scale = Vector2.ONE
 	rotation = 0.0
 	z_index = 20
 	visible = true
+	_set_player_texture(TEXTURE)
 	update_visual(0.0)
 
 
@@ -91,6 +103,31 @@ func bounce(vertical_speed: float, squash_duration: float) -> void:
 	squash_time = squash_duration
 
 
+func activate_fire_boots(duration: float) -> void:
+	fire_boots_time = max(fire_boots_time, duration)
+	fire_boots_anim_time = 0.0
+	squash_time = 0.0
+	_set_fire_boots_frame()
+
+
+func update_fire_boots(delta: float, thrust_speed: float) -> void:
+	if fire_boots_time <= 0.0:
+		return
+
+	fire_boots_time = max(0.0, fire_boots_time - delta)
+	if fire_boots_time <= 0.0:
+		_set_player_texture(TEXTURE)
+		return
+
+	fire_boots_anim_time += delta
+	velocity.y = thrust_speed
+	_set_fire_boots_frame()
+
+
+func is_fire_boots_active() -> bool:
+	return fire_boots_time > 0.0
+
+
 func set_feet_y(feet_y: float) -> void:
 	position.y = feet_y - HALF_H
 
@@ -98,6 +135,8 @@ func set_feet_y(feet_y: float) -> void:
 func begin_launcher_entry() -> void:
 	velocity = Vector2.ZERO
 	clear_input_hold()
+	fire_boots_time = 0.0
+	_set_player_texture(TEXTURE)
 	scale = Vector2.ONE
 	z_index = 6
 	visible = true
@@ -133,7 +172,20 @@ func update_visual(delta: float) -> void:
 	squash_time = max(0.0, squash_time - delta)
 	var squash_strength: float = squash_time / 0.16
 	var velocity_stretch: float = clamp(-velocity.y / abs(SPRING_SPEED_REF), -0.18, 0.18)
-	SpriteShadow.set_pair_scale(art, BASE_SCALE * Vector2(
+	var base_scale := FIRE_BOOTS_BASE_SCALE if is_fire_boots_active() else BASE_SCALE
+	SpriteShadow.set_pair_position(art, FIRE_BOOTS_ART_OFFSET if is_fire_boots_active() else Vector2.ZERO)
+	SpriteShadow.set_pair_scale(art, base_scale * Vector2(
 		1.0 + squash_strength * 0.10 - velocity_stretch * 0.08,
 		1.0 - squash_strength * 0.12 + velocity_stretch * 0.10
 	))
+
+
+func _set_fire_boots_frame() -> void:
+	var frame_index := int(floor(fire_boots_anim_time / FIRE_BOOTS_FRAME_TIME)) % FIRE_BOOTS_TEXTURES.size()
+	_set_player_texture(FIRE_BOOTS_TEXTURES[frame_index])
+
+
+func _set_player_texture(texture: Texture2D) -> void:
+	if art == null:
+		return
+	SpriteShadow.set_pair_texture(art, texture)

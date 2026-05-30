@@ -1,6 +1,6 @@
 # Sky Scribble Jump
 
-Sky Scribble Jump is a small Godot 4 vertical jumper inspired by classic doodle-style platform games. It uses original image-generated artwork, hand-tuned platform physics, spring boosts, launcher boosts, a start screen, and a dedicated game-over screen.
+Sky Scribble Jump is a small Godot 4 vertical jumper inspired by classic doodle-style platform games. It uses original image-generated artwork, hand-tuned platform physics, spring boosts, launcher boosts, fire-boots boosts, a start screen, and a dedicated game-over screen.
 
 ## Requirements
 

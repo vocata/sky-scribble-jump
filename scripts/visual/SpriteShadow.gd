@@ -24,6 +24,12 @@ static func set_pair_scale(sprite: Sprite2D, scale_value: Vector2) -> void:
 	shadow.scale = scale_value
 
 
+static func set_pair_texture(sprite: Sprite2D, texture: Texture2D) -> void:
+	sprite.texture = texture
+	var shadow: Sprite2D = sprite.get_meta("shadow_node")
+	shadow.texture = texture
+
+
 static func set_pair_position(sprite: Sprite2D, position_value: Vector2) -> void:
 	sprite.position = position_value
 	var shadow: Sprite2D = sprite.get_meta("shadow_node")

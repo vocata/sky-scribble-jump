@@ -22,6 +22,11 @@ class_name GameTuning
 @export var launcher_enter_time := 0.20
 @export var launcher_charge_time := 0.48
 
+@export_group("Fire Boots")
+@export var fire_boots_duration := 1.8
+@export var fire_boots_speed := -860.0
+@export var fire_boots_hit_radius := 42.0
+
 @export_group("Platforms")
 @export var initial_highest_platform_y := 680.0
 @export var starting_platform_y := 666.0

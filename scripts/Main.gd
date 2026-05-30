@@ -52,8 +52,11 @@ func _physics_process(delta: float) -> void:
 	var old_y: float = player.position.y
 	player.handle_movement(delta, tuning.game_width)
 	platform_spawner.update_platforms(delta)
+	player.update_fire_boots(delta, tuning.fire_boots_speed)
 	player.update_motion(delta, tuning.gravity, tuning.game_width)
-	_check_platform_landings(old_y)
+	_check_fire_boots_pickups()
+	if not player.is_fire_boots_active():
+		_check_platform_landings(old_y)
 	player.update_visual(delta)
 	_after_world_step(delta)
 
@@ -191,6 +194,23 @@ func _check_platform_landings(old_y: float) -> void:
 				player.bounce(tuning.jump_speed, 0.10)
 				effects.spawn_burst(Vector2(player.position.x, platform_y - 6.0), rng, 5, 0.65)
 				player.set_feet_y(platform_y)
+			return
+
+
+func _check_fire_boots_pickups() -> void:
+	if player.is_fire_boots_active():
+		return
+
+	for platform in platform_spawner.platforms:
+		if platform.broken or not platform.has_fire_boots:
+			continue
+
+		var pickup_pos := platform.get_fire_boots_pickup_position()
+		if player.position.distance_to(pickup_pos) <= tuning.fire_boots_hit_radius:
+			platform.consume_fire_boots()
+			player.activate_fire_boots(tuning.fire_boots_duration)
+			player.velocity.y = tuning.fire_boots_speed
+			effects.spawn_burst(pickup_pos, rng, 26, 1.55)
 			return
 
 

@@ -9,6 +9,7 @@ const SPRITE_WIDTH := 128.0
 const SPRITE_HEIGHT := 40.0
 const SPRING_BASE_SCALE := Vector2(0.58, 0.58)
 const LAUNCHER_BASE_SCALE := Vector2(0.46, 0.46)
+const FIRE_BOOTS_BASE_SCALE := Vector2(0.58, 0.58)
 const SPRING_VISUAL_HEIGHT := 31.9
 const SPRING_SEAT_Y := 7.0
 const SPRING_BASE_Y := -8.95
@@ -16,12 +17,14 @@ const SPRING_TOP_OFFSET := -25.0
 const LAUNCHER_BASE_Y := -17.0
 const LAUNCHER_ENTRY_OFFSET_Y := -36.0
 const LAUNCHER_MOUTH_SIDE_OFFSET := 4.0
+const FIRE_BOOTS_BASE_Y := -10.0
 
 const PLATFORM_NORMAL_TEXTURE := preload("res://assets/art/platforms/platform_green.png")
 const PLATFORM_MOVING_TEXTURE := preload("res://assets/art/platforms/platform_blue_moving.png")
 const PLATFORM_FRAGILE_TEXTURE := preload("res://assets/art/platforms/platform_red_fragile.png")
 const SPRING_TEXTURE := preload("res://assets/art/props/spring.png")
 const LAUNCHER_TEXTURE := preload("res://assets/art/props/launcher.png")
+const FIRE_BOOTS_TEXTURE := preload("res://assets/art/props/fire_boots.png")
 
 var platform_width := 108.0
 var platform_type := TYPE_NORMAL
@@ -30,14 +33,17 @@ var broken := false
 var fall_speed := 0.0
 var has_spring := false
 var has_launcher := false
+var has_fire_boots := false
 var launcher_dir := 1.0
 var launcher_offset := 0.0
+var fire_boots_offset := 0.0
 var spring_compress := 0.0
 var launcher_charge := 0.0
 
 var body_art: Sprite2D
 var spring_node: Node2D
 var launcher_node: Node2D
+var fire_boots_node: Node2D
 
 
 func setup(
@@ -55,8 +61,10 @@ func setup(
 	speed = move_speed
 	has_spring = contains_spring
 	has_launcher = contains_launcher
+	has_fire_boots = false
 	launcher_dir = launch_direction
 	launcher_offset = clamp(launcher_dir * platform_width * 0.24, -platform_width * 0.26, platform_width * 0.26)
+	fire_boots_offset = clamp(-launcher_dir * platform_width * 0.22, -platform_width * 0.26, platform_width * 0.26)
 
 	_build_body()
 	_build_props()
@@ -104,6 +112,33 @@ func get_launcher_entry_position() -> Vector2:
 		launcher_x + launcher_dir * LAUNCHER_MOUTH_SIDE_OFFSET,
 		position.y + LAUNCHER_ENTRY_OFFSET_Y
 	)
+
+
+func set_fire_boots(enabled: bool) -> void:
+	if fire_boots_node != null:
+		fire_boots_node.queue_free()
+		fire_boots_node = null
+
+	has_fire_boots = enabled
+	if not has_fire_boots:
+		return
+
+	fire_boots_node = Node2D.new()
+	SpriteShadow.add_pair(fire_boots_node, FIRE_BOOTS_TEXTURE, Vector2(2.0, 3.0), 0.14)
+	fire_boots_node.scale = FIRE_BOOTS_BASE_SCALE
+	fire_boots_node.position = Vector2(fire_boots_offset, FIRE_BOOTS_BASE_Y)
+	fire_boots_node.z_index = 4
+	add_child(fire_boots_node)
+
+
+func get_fire_boots_pickup_position() -> Vector2:
+	if fire_boots_node != null:
+		return fire_boots_node.global_position
+	return global_position + Vector2(fire_boots_offset, FIRE_BOOTS_BASE_Y)
+
+
+func consume_fire_boots() -> void:
+	set_fire_boots(false)
 
 
 func set_launcher_charge(charge: float) -> void:

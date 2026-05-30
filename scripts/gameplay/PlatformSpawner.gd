@@ -29,7 +29,7 @@ func clear_platforms() -> void:
 
 
 func spawn_starting_platform() -> void:
-	create_platform(tuning.game_width * 0.5, tuning.starting_platform_y, tuning.starting_platform_width, JumpPlatform.TYPE_NORMAL, false, false)
+	create_platform(tuning.game_width * 0.5, tuning.starting_platform_y, tuning.starting_platform_width, JumpPlatform.TYPE_NORMAL, false, false, false)
 
 
 func fill_initial(score: int) -> void:
@@ -77,10 +77,11 @@ func spawn_next_platform(score: int) -> void:
 
 	var has_launcher: bool = platform_type != JumpPlatform.TYPE_FRAGILE and score > 220 and rng.randf() < 0.055 + difficulty * 0.035
 	var has_spring: bool = not has_launcher and platform_type != JumpPlatform.TYPE_FRAGILE and rng.randf() < 0.11 + difficulty * 0.04
-	create_platform(x, highest_platform_y, width, platform_type, has_spring, has_launcher)
+	var has_fire_boots: bool = not has_launcher and not has_spring and platform_type != JumpPlatform.TYPE_FRAGILE and score > 120 and rng.randf() < 0.06 + difficulty * 0.035
+	create_platform(x, highest_platform_y, width, platform_type, has_spring, has_launcher, has_fire_boots)
 
 
-func create_platform(x: float, y: float, width: float, platform_type: String, has_spring: bool, has_launcher: bool) -> JumpPlatform:
+func create_platform(x: float, y: float, width: float, platform_type: String, has_spring: bool, has_launcher: bool, has_fire_boots: bool = false) -> JumpPlatform:
 	var speed := 0.0
 	if platform_type == JumpPlatform.TYPE_MOVING:
 		speed = rng.randf_range(tuning.moving_platform_min_speed, tuning.moving_platform_max_speed) * (-1.0 if rng.randf() < 0.5 else 1.0)
@@ -89,5 +90,6 @@ func create_platform(x: float, y: float, width: float, platform_type: String, ha
 	var platform := PLATFORM_SCENE.instantiate() as JumpPlatform
 	world.add_child(platform)
 	platform.setup(Vector2(x, y), width, platform_type, has_spring, has_launcher, speed, launch_dir)
+	platform.set_fire_boots(has_fire_boots)
 	platforms.append(platform)
 	return platform
